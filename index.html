@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>理科クイズ</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .card {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 450px;
+      transition: all 0.3s ease;
+    }
+    .hidden { display: none !important; }
+    h2 { font-size: 1.4rem; color: #333; margin-bottom: 20px; text-align: center; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.9rem; color: #666; margin-bottom: 6px; font-weight: 600; }
+    select, input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e1e8ed;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    select:focus, input:focus { border-color: #4a90e2; }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 10px;
+    }
+    .btn:hover { background: #357abd; }
+    .btn:active { transform: scale(0.98); }
+    
+    .student-badge {
+      background: #eef5ff;
+      color: #357abd;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      display: inline-block;
+      margin-bottom: 15px;
+    }
+    .question-box {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .choices { display: flex; flex-direction: column; gap: 10px; }
+    .choice-btn {
+      padding: 14px;
+      background: #f1f3f5;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #495057;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .choice-btn:hover { background: #e9ecef; border-color: #ced4da; }
+    .alert-message {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+      background: #ffe3e3;
+      color: #e03131;
+    }
+    .success-box { text-align: center; }
+    .success-box h3 { color: #2b8a3e; font-size: 1.5rem; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <!-- STEP 1: 生徒情報入力画面 -->
+    <div id="step-1">
+      <h2>生徒情報の入力</h2>
+      <div class="form-group">
+        <label>学年</label>
+        <select id="grade">
+          <option value="中1">中1</option>
+          <option value="中2">中2</option>
+          <option value="中3">中3</option>
+          <option value="高1">高1</option>
+          <option value="高2">高2</option>
+          <option value="高3">高3</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>クラス</label>
+        <select id="classNum">
+          <option value="1">1組</option>
+          <option value="2">2組</option>
+          <option value="3">3組</option>
+          <option value="4">4組</option>
+          <option value="5">5組</option>
+          <option value="6">6組</option>
+          <option value="7">7組</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>出席番号</label>
+        <input type="number" id="studentNo" min="1" placeholder="例: 15" required>
+      </div>
+      <button class="btn" id="start-btn">クイズを始める ➔</button>
+    </div>
+
+    <!-- STEP 2: 4択クイズ画面 -->
+    <div id="step-2" class="hidden">
+      <div id="user-info-badge" class="student-badge"></div>
+      <h2>理科クイズ</h2>
+      <div class="question-box">
+        Q. 水の化学式として正しいものはどれ？
+      </div>
+      <div class="choices">
+        <button class="choice-btn" data-correct="false">CO₂</button>
+        <button class="choice-btn" data-correct="true">H₂O</button>
+        <button class="choice-btn" data-correct="false">NaCl</button>
+        <button class="choice-btn" data-correct="false">O₂</button>
+      </div>
+      <div id="error-msg" class="alert-message hidden">不正解です！もう一度考えてみよう。</div>
+    </div>
+
+    <!-- STEP 3: 正解画面 -->
+    <div id="step-3" class="hidden">
+      <div class="success-box">
+        <h3>🎉 正解です！</h3>
+        <p style="color:#666; margin-bottom:20px;">解答データが正常に送信されました。</p>
+        <button class="btn" id="reset-btn">最初に戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZOZM9x9fdo284bUAfZUblpfuv2ikQB3g",
+      authDomain: "bunkasai-3e999.firebaseapp.com",
+      databaseURL: "https://bunkasai-3e999-default-rtdb.firebaseio.com",
+      projectId: "bunkasai-3e999",
+      storageBucket: "bunkasai-3e999.firebasestorage.app",
+      messagingSenderId: "677827224992",
+      appId: "1:677827224992:web:83aa8c073afa416f4230c5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const step1 = document.getElementById('step-1');
+    const step2 = document.getElementById('step-2');
+    const step3 = document.getElementById('step-3');
+    const startBtn = document.getElementById('start-btn');
+    const errorMsg = document.getElementById('error-msg');
+    const resetBtn = document.getElementById('reset-btn');
+
+    let userData = {};
+
+    startBtn.addEventListener('click', () => {
+      const studentNo = document.getElementById('studentNo').value;
+      if (!studentNo) {
+        alert('出席番号を入力してください');
+        return;
+      }
+
+      userData = {
+        grade: document.getElementById('grade').value,
+        classNum: document.getElementById('classNum').value,
+        studentNo: studentNo
+      };
+
+      document.getElementById('user-info-badge').innerText = `${userData.grade} ${userData.classNum}組 ${userData.studentNo}番`;
+      step1.classList.add('hidden');
+      step2.classList.remove('hidden');
+    });
+
+    document.querySelectorAll('.choice-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const isCorrect = btn.getAttribute('data-correct') === 'true';
+
+        if (isCorrect) {
+          errorMsg.classList.add('hidden');
+          await push(ref(db, 'answers'), {
+            ...userData,
+            timestamp: Date.now()
+          });
+          step2.classList.add('hidden');
+          step3.classList.remove('hidden');
+        } else {
+          errorMsg.classList.remove('hidden');
+        }
+      });
+    });
+
+    resetBtn.addEventListener('click', () => {
+      document.getElementById('studentNo').value = '';
+      step3.classList.add('hidden');
+      step1.classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>
