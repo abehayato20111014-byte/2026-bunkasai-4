@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>理科クイズ</title>
+  <title>一条祭クイズ</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -89,8 +89,21 @@
     
     /* 結果表示エリア */
     .result-box { text-align: center; }
-    .result-title { font-size: 1.6rem; margin-bottom: 10px; }
-    .result-desc { color: #666; margin-bottom: 20px; font-size: 0.95rem; }
+    .result-title { font-size: 1.6rem; margin-bottom: 12px; }
+    .result-desc { color: #555; margin-bottom: 20px; font-size: 1rem; font-weight: bold; line-height: 1.5; }
+    .spinner {
+      margin: 15px auto;
+      width: 32px;
+      height: 32px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #4a90e2;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -132,15 +145,15 @@
     <!-- STEP 2: 4択クイズ画面 -->
     <div id="step-2" class="hidden">
       <div id="user-info-badge" class="student-badge"></div>
-      <h2>理科クイズ</h2>
+      <h2>一条祭クイズ</h2>
       <div class="question-box">
-        Q. 水の化学式として正しいものはどれ？
+メッキ解の幹部、氷室（ひむろ）には面白い黒歴史があります。それは何でしょう
       </div>
       <div class="choices">
-        <button class="choice-btn" data-correct="false">CO₂</button>
-        <button class="choice-btn" data-correct="true">H₂O</button>
-        <button class="choice-btn" data-correct="false">NaCl</button>
-        <button class="choice-btn" data-correct="false">O₂</button>
+        <button class="choice-btn" data-correct="false">東京へ行ったときに一目ぼれしたことがある</button>
+        <button class="choice-btn" data-correct="true">中学時代に恋愛小説を出版したことがある</button>
+        <button class="choice-btn" data-correct="false">中学時代にまゆげを全部剃ったことがある</button>
+        <button class="choice-btn" data-correct="false">中学時代に有名な格闘家と戦って勝ったと嘘をついたことがある</button>
       </div>
     </div>
 
@@ -148,32 +161,29 @@
     <div id="step-3" class="hidden">
       <div class="result-box">
         <h3 id="result-title" class="result-title"></h3>
+        <div id="loading-spinner" class="spinner hidden"></div>
         <p id="result-desc" class="result-desc"></p>
-        <button class="btn" id="reset-btn">最初に戻る</button>
+        <button class="btn hidden" id="reset-btn">最初に戻る</button>
       </div>
     </div>
   </div>
 
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyBZOZM9x9fdo284bUAfZUblpfuv2ikQB3g",
-    authDomain: "bunkasai-3e999.firebaseapp.com",
-    databaseURL: "https://bunkasai-3e999-default-rtdb.firebaseio.com",
-    projectId: "bunkasai-3e999",
-    storageBucket: "bunkasai-3e999.firebasestorage.app",
-    messagingSenderId: "677827224992",
-    appId: "1:677827224992:web:86a82266258dc9724230c5"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZOZM9x9fdo284bUAfZUblpfuv2ikQB3g",
+      authDomain: "bunkasai-3e999.firebaseapp.com",
+      // ※データベースの作成地域がアジア等の場合は、コンソール画面のURLに書き換えてください
+      databaseURL: "https://bunkasai-3e999-default-rtdb.firebaseio.com",
+      projectId: "bunkasai-3e999",
+      storageBucket: "bunkasai-3e999.firebasestorage.app",
+      messagingSenderId: "677827224992",
+      appId: "1:677827224992:web:86a82266258dc9724230c5"
+    };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
+    const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
     const step1 = document.getElementById('step-1');
@@ -181,13 +191,14 @@
     const step3 = document.getElementById('step-3');
     const startBtn = document.getElementById('start-btn');
     const resetBtn = document.getElementById('reset-btn');
+    const spinner = document.getElementById('loading-spinner');
 
     const resultTitle = document.getElementById('result-title');
     const resultDesc = document.getElementById('result-desc');
 
     let userData = {};
 
-    // 画面切り替え：クイズ開始
+    // クイズ開始
     startBtn.addEventListener('click', () => {
       const studentNo = document.getElementById('studentNo').value;
       if (!studentNo) {
@@ -209,33 +220,55 @@
     // 解答ボタン処理
     document.querySelectorAll('.choice-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+
         const isCorrect = btn.getAttribute('data-correct') === 'true';
 
         if (isCorrect) {
-          // 正解時：Firebaseへデータ送信
-          await push(ref(db, 'answers'), {
-            ...userData,
-            timestamp: Date.now()
-          });
-
+          // 1. 即座に正解メッセージ＆送信中表示へ切り替え
           resultTitle.innerText = "🎉 正解です！";
           resultTitle.style.color = "#2b8a3e";
-          resultDesc.innerText = "解答データが正常に送信されました。";
+          resultDesc.innerText = "送信中、、、アプリを閉じないでください、、";
+          spinner.classList.remove('hidden');
+          resetBtn.classList.add('hidden');
+
+          step2.classList.add('hidden');
+          step3.classList.remove('hidden');
+
+          try {
+            // 2. Firebaseへの送信実行
+            await push(ref(db, 'answers'), {
+              ...userData,
+              timestamp: Date.now()
+            });
+
+            // 3. 送信完了表示に更新
+            spinner.classList.add('hidden');
+            resultDesc.innerText = "送信が完了しました！";
+            resetBtn.classList.remove('hidden');
+          } catch (error) {
+            console.error("送信エラー:", error);
+            spinner.classList.add('hidden');
+            resultDesc.innerText = "送信に失敗しました。通信環境を確認してください。";
+            resetBtn.classList.remove('hidden');
+          }
         } else {
-          // 不正解時：Firebase送信なし
+          // 不正解時
           resultTitle.innerText = "❌ 不正解です...";
           resultTitle.style.color = "#e03131";
           resultDesc.innerText = "残念！解答データは送信されませんでした。";
-        }
+          spinner.classList.add('hidden');
+          resetBtn.classList.remove('hidden');
 
-        // どちらの場合も結果画面を表示して終了
-        step2.classList.add('hidden');
-        step3.classList.remove('hidden');
+          step2.classList.add('hidden');
+          step3.classList.remove('hidden');
+        }
       });
     });
 
-    // 最初に戻る処理
+    // 最初に戻る
     resetBtn.addEventListener('click', () => {
+      document.querySelectorAll('.choice-btn').forEach(b => b.disabled = false);
       document.getElementById('studentNo').value = '';
       step3.classList.add('hidden');
       step1.classList.remove('hidden');
