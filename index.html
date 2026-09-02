@@ -86,18 +86,11 @@
       transition: all 0.2s;
     }
     .choice-btn:hover { background: #e9ecef; border-color: #ced4da; }
-    .alert-message {
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 6px;
-      text-align: center;
-      font-weight: bold;
-      font-size: 0.9rem;
-      background: #ffe3e3;
-      color: #e03131;
-    }
-    .success-box { text-align: center; }
-    .success-box h3 { color: #2b8a3e; font-size: 1.5rem; margin-bottom: 10px; }
+    
+    /* 結果表示エリア */
+    .result-box { text-align: center; }
+    .result-title { font-size: 1.6rem; margin-bottom: 10px; }
+    .result-desc { color: #666; margin-bottom: 20px; font-size: 0.95rem; }
   </style>
 </head>
 <body>
@@ -149,14 +142,13 @@
         <button class="choice-btn" data-correct="false">NaCl</button>
         <button class="choice-btn" data-correct="false">O₂</button>
       </div>
-      <div id="error-msg" class="alert-message hidden">不正解です！もう一度考えてみよう。</div>
     </div>
 
-    <!-- STEP 3: 正解画面 -->
+    <!-- STEP 3: 結果画面（正解 / 不正解共通） -->
     <div id="step-3" class="hidden">
-      <div class="success-box">
-        <h3>🎉 正解です！</h3>
-        <p style="color:#666; margin-bottom:20px;">解答データが正常に送信されました。</p>
+      <div class="result-box">
+        <h3 id="result-title" class="result-title"></h3>
+        <p id="result-desc" class="result-desc"></p>
         <button class="btn" id="reset-btn">最初に戻る</button>
       </div>
     </div>
@@ -183,11 +175,14 @@
     const step2 = document.getElementById('step-2');
     const step3 = document.getElementById('step-3');
     const startBtn = document.getElementById('start-btn');
-    const errorMsg = document.getElementById('error-msg');
     const resetBtn = document.getElementById('reset-btn');
+
+    const resultTitle = document.getElementById('result-title');
+    const resultDesc = document.getElementById('result-desc');
 
     let userData = {};
 
+    // 画面切り替え：クイズ開始
     startBtn.addEventListener('click', () => {
       const studentNo = document.getElementById('studentNo').value;
       if (!studentNo) {
@@ -206,24 +201,35 @@
       step2.classList.remove('hidden');
     });
 
+    // 解答ボタン処理
     document.querySelectorAll('.choice-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const isCorrect = btn.getAttribute('data-correct') === 'true';
 
         if (isCorrect) {
-          errorMsg.classList.add('hidden');
+          // 正解時：Firebaseへデータ送信
           await push(ref(db, 'answers'), {
             ...userData,
             timestamp: Date.now()
           });
-          step2.classList.add('hidden');
-          step3.classList.remove('hidden');
+
+          resultTitle.innerText = "🎉 正解です！";
+          resultTitle.style.color = "#2b8a3e";
+          resultDesc.innerText = "解答データが正常に送信されました。";
         } else {
-          errorMsg.classList.remove('hidden');
+          // 不正解時：Firebase送信なし
+          resultTitle.innerText = "❌ 不正解です...";
+          resultTitle.style.color = "#e03131";
+          resultDesc.innerText = "残念！解答データは送信されませんでした。";
         }
+
+        // どちらの場合も結果画面を表示して終了
+        step2.classList.add('hidden');
+        step3.classList.remove('hidden');
       });
     });
 
+    // 最初に戻る処理
     resetBtn.addEventListener('click', () => {
       document.getElementById('studentNo').value = '';
       step3.classList.add('hidden');
